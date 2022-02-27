@@ -25,6 +25,15 @@ typedef enum {PIT_0,PIT_1,PIT_2,PIT_3} PIT_timer_t;
 
 /********************************************************************************************/
 /*!
+       \brief      This function has the wait for the PIT implementing a loop while it counts
+       \param[in]  void.
+       \return void
+*/
+
+void PIT_loop(void);
+
+/********************************************************************************************/
+/*!
        \brief      This function contains the ISR for the PIT module
        \param[in]  void.
        \return void
@@ -45,12 +54,14 @@ void PIT0_IRQHandler(void);
 */
 void PIT_delay(PIT_timer_t pit_timer, My_float_pit_t system_clock, My_float_pit_t delay);
 
+
 /********************************************************************************************/
 /*!
        \brief      This function enable the clock signal of the pit
        \param[in]  void.
        \return void
 */
+
 void PIT_clock_gating(void);
 
 /********************************************************************************************/

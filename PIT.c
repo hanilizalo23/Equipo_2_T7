@@ -12,7 +12,18 @@
 #include "GPIO.h"
 #include "Bits.h"
 
+uint8_t pit_inter_status = FALSE; /**Initial state for the PIT flag**/
+
 uint8_t g_flag_PIT_0 = FALSE; /** Global flag for the interrupt*/
+
+void PIT_loop(void) /**The while wait for the PIT*/
+{
+	do
+	{
+		pit_inter_status =  PIT_get_interrupt_flag_status();
+	}
+	while(FALSE == pit_inter_status);
+}
 
 void PIT0_IRQHandler(void) /** ISR of the PIT_0*/
 {
@@ -26,10 +37,10 @@ void PIT_delay(PIT_timer_t pit_timer, My_float_pit_t system_clock, My_float_pit_
 {
 	float LDVALUE = 0.0F;
 	float clock_time = 0.0F;
-	system_clock = system_clock /2;
-	clock_time = (1/system_clock);
-	LDVALUE = (delay / clock_time);
-	LDVALUE = LDVALUE - 1;
+	system_clock = system_clock /2; /**Dividing the frequency of the K64 for the PIT*/
+	clock_time = (1/system_clock); /**Time is the inverse of the frequency*/
+	LDVALUE = (delay / clock_time); /**Dividing the desired delay by the time of the clock*/
+	LDVALUE = LDVALUE - 1; /**Subtracting one, because starts from 0*/
 
      switch(pit_timer) /** PIT to choose*/
            {

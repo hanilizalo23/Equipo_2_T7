@@ -15,8 +15,8 @@
 #include "Bits.h"
 #include "RGB.h"
 
-#define SYSTEM_CLOCK (21000000U)
-#define DELAY (2.0F)
+#define SYSTEM_CLOCK (21000000U) /** Maximum frequency of the K64*/
+#define DELAY (2.0F) /**Required delay for the sequence*/
 
 #define GPIO_OFF_CONST (0xFFFFFFFFU) /**To turn off the ports*/
 #define GPIO_ON_CONST (0U) /**To turn on the ports*/
@@ -27,6 +27,8 @@ gpio_pin_control_register_t pcr_gpioe_pin_26 = GPIO_MUX1; /**Green LED*/
 
 gpio_pin_control_register_t pcr_gpioc_pin_6 = GPIO_MUX1|GPIO_PE|GPIO_PS; /**Switch 2*/
 gpio_pin_control_register_t pcr_gpioa_pin_4 = GPIO_MUX1|GPIO_PE|GPIO_PS; /**Switch 3*/
+
+gpio_pin_control_register_t input_intr_config = GPIO_MUX1|GPIO_PE|GPIO_PS|INTR_FALLING_EDGE;
 
 int main(void)
 {
@@ -41,7 +43,6 @@ int main(void)
 
 	GPIO_pin_control_register(GPIO_C,bit_6,&pcr_gpioc_pin_6); /**Switch 2*/
 	GPIO_pin_control_register(GPIO_A,bit_4,&pcr_gpioa_pin_4); /**Switch 3*/
-
 
 	GPIO_write_port(GPIO_B, GPIO_OFF_CONST); /**Turn off the port of the blue and red LED*/
 	GPIO_write_port(GPIO_E, GPIO_OFF_CONST); /**Turn off the port of the green LED*/
@@ -59,15 +60,25 @@ int main(void)
 	GPIO_write_port(GPIO_E, GPIO_ON_CONST);
 	GPIO_write_port(GPIO_E, GPIO_OFF_CONST);
 
-	uint8_t pit_inter_status = FALSE; /**Initial state for the PIT flag**/
+	GPIO_pin_control_register(GPIO_C, bit_6, &input_intr_config); /**Switch 2 as an interrupt*/
+	GPIO_pin_control_register(GPIO_A, bit_4, &input_intr_config); /**Switch 3 as an interrupt*/
+
+	NVIC_set_basepri_threshold(PRIORITY_10);
 
 	PIT_clock_gating(); /**Turning on the clock for the PIT**/
 	PIT_enable(); /**Enabling of the PIT**/
 
-	NVIC_enable_interrupt_and_priotity(PIT_CH0_IRQ, PRIORITY_10); /**NVIC priority**/
+	NVIC_enable_interrupt_and_priotity(PIT_CH0_IRQ, PRIORITY_8); /**NVIC priority**/
+
+	NVIC_enable_interrupt_and_priotity(PORTC_IRQ,PRIORITY_5); /**Set priority and enabling the switch 2*/
+	NVIC_enable_interrupt_and_priotity(PORTA_IRQ,PRIORITY_5); /**Set priority and enabling the switch 3*/
+
 	NVIC_global_enable_interrupts; /**Enabling NVIC*/
 
 	PIT_delay(PIT_0, SYSTEM_CLOCK, DELAY); /**Function of the delay with the PIT*/
+
+	GPIO_callback_init(GPIO_C, change_states); /**Callback for the switch 2*/
+	GPIO_callback_init(GPIO_A, change_states); /**Callback for the switch 3*/
 
 	while(1)
 	{
