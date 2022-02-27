@@ -17,6 +17,9 @@
 #include "GPIO.h"
 #include "bits.h"
 
+static void (*gpio_C_callback)(void) = 0; /**Callback for the switch 2*/
+static void (*gpio_A_callback)(void) = 0; /**Callback for the switch 3*/
+
 uint8_t GPIO_clock_gating(gpio_port_name_t port_name)
 {
 	switch(port_name)/** Selecting the GPIO for clock enabling*/
@@ -253,4 +256,58 @@ void GPIO_data_direction_pin(gpio_port_name_t port_name, uint8_t state, uint8_t 
 		default:/**If doesn't exist the option do nothing*/
 		break;
 		}
+}
+
+void PORTC_IRQHandler(void) /**Verifies if the interrupt was from port C and calls the correspondent function*/
+{
+	if(gpio_C_callback)
+	{
+		gpio_C_callback();
+	}
+	GPIO_clear_interrupt(GPIO_C);
+
+}
+
+void PORTA_IRQHandler(void) /**Verifies if the interrupt was from port A and calls the correspondent function*/
+{
+	if(gpio_A_callback)
+	{
+		gpio_A_callback();
+	}
+
+	GPIO_clear_interrupt(GPIO_A);
+}
+
+void GPIO_clear_interrupt(gpio_port_name_t port_name)
+{
+	switch(port_name)/** Selecting the GPIO for cleaning*/
+	{
+		case GPIO_A: /** GPIO A is selected*/
+			PORTA->ISFR=0xFFFFFFFF;
+			break;
+		case GPIO_B: /** GPIO B is selected*/
+			PORTB->ISFR=0xFFFFFFFF;
+			break;
+		case GPIO_C: /** GPIO C is selected*/
+			PORTC->ISFR = 0xFFFFFFFF;
+			break;
+		case GPIO_D: /** GPIO D is selected*/
+			PORTD->ISFR=0xFFFFFFFF;
+			break;
+		default: /** GPIO E is selected*/
+			PORTE->ISFR=0xFFFFFFFF;
+			break;
+	}// end switch
+}
+
+void GPIO_callback_init(gpio_port_name_t port_name,void (*handler)(void)) /**Assigns the function to execute according to the port*/
+{
+	if(GPIO_A == port_name)
+	{
+		gpio_A_callback = handler;
+	}
+	else
+	{
+		gpio_C_callback = handler;
+	}
 }

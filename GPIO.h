@@ -215,4 +215,9 @@ void GPIO_clear_pin(gpio_port_name_t port_name, uint8_t pin);
  */
 void GPIO_toogle_pin(gpio_port_name_t port_name, uint8_t pin);
 
+void PORTC_IRQHandler(void); /**Verifies if the interrupt was from port C and calls the correspondent function*/
+void PORTA_IRQHandler(void); /**Verifies if the interrupt was from port A and calls the correspondent function*/
+void GPIO_clear_interrupt(gpio_port_name_t port_name); /**Cleans the interrupr that was called*/
+void GPIO_callback_init(gpio_port_name_t port_name,void (*handler)(void)); /**Assigns the function to execute according to the port*/
+
 #endif /* GPIO_H_ */
