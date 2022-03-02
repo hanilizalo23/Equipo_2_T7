@@ -25,15 +25,6 @@ typedef enum {PIT_0,PIT_1,PIT_2,PIT_3} PIT_timer_t;
 
 /********************************************************************************************/
 /*!
-       \brief      This function has the wait for the PIT implementing a loop while it counts
-       \param[in]  void.
-       \return void
-*/
-
-void PIT_loop(void);
-
-/********************************************************************************************/
-/*!
        \brief      This function contains the ISR for the PIT module
        \param[in]  void.
        \return void
@@ -101,6 +92,9 @@ void PIT_enable(void);
        \return uint8_t flag status
 */
 void PIT_enable_interrupt(PIT_timer_t pit);
+
+
+void PIT_callback_init(void (*handler)(void));
 
 
 #endif /* PIT_H_ */

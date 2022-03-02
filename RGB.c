@@ -14,116 +14,111 @@
 #include "bits.h"
 #include "PIT.h"
 
-typedef struct /**Struct that contanis the elements of every state, that is the sequence to run and the next state*/
+typedef enum {seqmin, seqmax = 2}range_seq; /**Enum for the limits of the sequence*/
+typedef enum {seqnw, seqsw2, seqsw3, seqsw23}number_seq; /**Enum for the values of the sequence*/
+typedef enum {color0, color1, color2}number_color; /**Enum for the three colors of every sequence*/
+
+/**Number of the pins for the reading*/
+uint8_t sw2pin = 6;
+uint8_t sw3pin = 4;
+
+/**Variables for color and sequence*/
+uint8_t color = 0;
+uint8_t sequence = 0;
+
+void SW3_cb(void) /**Setter for the callback of sw3 and both reading*/
 {
-	void(*fptrSequence)(void);
-	uint8_t next[4];
-}State_t;
+	/**Starting the color of this sequence as the first*/
+	color = color0;
 
-/**States of the machine*/
-const State_t FSM_Moore[4] =
-{
-		{no_color, {sequence01, sequence10, sequence11, sequence00}},
-		{y_r_p,    {sequence10, sequence11, sequence00, sequence10}},
-		{g_r_w,    {sequence11, sequence00, sequence01, sequence10}},
-		{b_g_w,    {sequence00, sequence01, sequence10, sequence11}}
-};
+	/**Variables for reading*/
+	uint8_t sw2_read;
+	uint8_t sw3_read;
+	uint8_t sw_read;
 
-uint8_t current_state = sequence00; /**Actual state*/
-uint32_t input; /**Next state will be determined by this variable*/
+	/**Reading the values of the switches*/
+	sw2_read = GPIO_read_pin(GPIO_C, sw2pin);
+	sw3_read = GPIO_read_pin(GPIO_A, sw3pin);
 
-void change_states(void) /**Comparing the inputs and assigning the correspondent state*/
-{
-	if(((GPIOA->PDIR & 0x00000010) == 0x10) && ((GPIOC->PDIR & 0x00000040) == 0x40))
+	/**An OR of the values*/
+	sw_read = sw2_read | sw3_read;
+
+	if (seqmin == sw_read) /**If the value is 0, it means, both swtiches are pressed, is the turn of the fourth sequence and cleaning the status*/
 	{
-		input = sequence00;
+		sequence = seqsw23;
+		GPIO_clear_irq_status(GPIO_A);
+		GPIO_clear_irq_status(GPIO_C);
 	}
-	else if(((GPIOA->PDIR & 0x00000010) == 0x10) && ((GPIOC->PDIR & 0x00000040) == 0x0))
+	else /**If the value is only for the switch 3, third sequence is going to run*/
 	{
-		input = sequence01;
+		sequence = seqsw3;
+		GPIO_clear_irq_status(GPIO_A);
 	}
-	else if(((GPIOA->PDIR & 0x00000010) == 0x0) && ((GPIOC->PDIR & 0x00000040) == 0x40))
-	{
-		input = sequence10;
-	}
-	else if(((GPIOA->PDIR & 0x00000010) == 0x0) && ((GPIOC->PDIR & 0x00000040) == 0x0))
-	{
-		input = sequence11;
-	}
-
-	FSM_Moore[current_state].fptrSequence();
-
-	current_state = FSM_Moore[current_state].next[input];
 }
 
-void y_r_p(void) /**Sequence of yellow, red and purple with a delay of 2 seconds with the PIT*/
+void SW2_cb(void) /**Setter for the callback of sw2*/
 {
-	yellow();
-	red();
-	purple();
+	color = color0;
+	sequence = seqsw2;
+	GPIO_clear_irq_status(GPIO_C);
 }
 
-void g_r_w(void) /**Sequence of green, red and white with a delay of 2 seconds with the PIT*/
+void PIT_cb(void) /**Callback for the PIT*/
 {
-	green();
-	red();
-	white();
+	color++; /**Go switching colors*/
+
+	if(seqmax < color) /**As long as the color sequence is behind the max limit, reset it*/
+	{
+		color = color0;
+	}
+
+	PIT_clear_interrupt_flag(); /**Cleaning the flag of PIT*/
 }
 
-void b_g_w(void) /**Sequence of purple, green and white with a delay of 2 seconds with the PIT*/
+/**Getters for the sequence and color*/
+
+uint8_t get_sequence(void)
 {
-	blue();
-	green();
-	white();
+	return sequence;
+}
+
+uint8_t get_color(void)
+{
+	return color;
 }
 
 void green(void) /**Turn on the green LED, waiting and turning it off*/
 {
 	GPIO_clear_pin(GPIO_E, bit_26);
-	PIT_loop();
 	GPIO_set_pin(GPIO_E, bit_26);
-
-	PIT_clear_interrupt_flag();
 }
 
 void blue(void) /**Turn on the blue LED, waiting and turning it off*/
 {
     GPIO_clear_pin(GPIO_B, bit_21);
-	PIT_loop();
 	GPIO_set_pin(GPIO_B, bit_21);
-
-	PIT_clear_interrupt_flag();
 }
 
 void purple(void) /**Turn on the purple LED, waiting and turning it off*/
 {
 	GPIO_clear_pin(GPIO_B, bit_21);
 	GPIO_clear_pin(GPIO_B, bit_22);
-	PIT_loop();
 	GPIO_set_pin(GPIO_B, bit_21);
 	GPIO_set_pin(GPIO_B, bit_22);
-
-   	PIT_clear_interrupt_flag();
 }
 
 void red(void) /**Turn on the red LED, waiting and turning it off*/
 {
 	GPIO_clear_pin(GPIO_B, bit_22);
-	PIT_loop();
 	GPIO_set_pin(GPIO_B, bit_22);
-
-	PIT_clear_interrupt_flag();
 }
 
 void yellow(void) /**Turn on the yellow LED, waiting and turning it off*/
 {
 	GPIO_clear_pin(GPIO_B, bit_22);
 	GPIO_clear_pin(GPIO_E, bit_26);
-	PIT_loop();
 	GPIO_set_pin(GPIO_B, bit_22);
 	GPIO_set_pin(GPIO_E, bit_26);
-
-	PIT_clear_interrupt_flag();
 }
 
 void white(void) /**Turn on the white LED, waiting and turning it off*/
@@ -131,17 +126,14 @@ void white(void) /**Turn on the white LED, waiting and turning it off*/
 	GPIO_clear_pin(GPIO_B, bit_21);
 	GPIO_clear_pin(GPIO_B, bit_22);
 	GPIO_clear_pin(GPIO_E, bit_26);
-	PIT_loop();
 	GPIO_set_pin(GPIO_B, bit_21);
 	GPIO_set_pin(GPIO_B, bit_22);
 	GPIO_set_pin(GPIO_E, bit_26);
-
-	PIT_clear_interrupt_flag();
 }
 
 void no_color(void) /**Turn on none color*/
 {
-	PIT_loop();
-
-	PIT_clear_interrupt_flag();
+	GPIO_set_pin(GPIO_B, bit_21);
+	GPIO_set_pin(GPIO_B, bit_22);
+	GPIO_set_pin(GPIO_E, bit_26);
 }

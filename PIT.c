@@ -16,21 +16,19 @@ uint8_t pit_inter_status = FALSE; /**Initial state for the PIT flag**/
 
 uint8_t g_flag_PIT_0 = FALSE; /** Global flag for the interrupt*/
 
-void PIT_loop(void) /**The while wait for the PIT*/
-{
-	do
-	{
-		pit_inter_status =  PIT_get_interrupt_flag_status();
-	}
-	while(FALSE == pit_inter_status);
-}
+static void (*PIT_cb)(void) = 0;
 
 void PIT0_IRQHandler(void) /** ISR of the PIT_0*/
 {
-     uint32_t dummyRead;
-     PIT->CHANNEL[0].TFLG |= PIT_TFLG_TIF_MASK; /** Clears the flag*/
-     dummyRead = PIT->CHANNEL[0].TCTRL; /** Read control register for clear PIT flag, this is silicon bug*/
-     g_flag_PIT_0 = TRUE; /** Clears the programmer flag*/
+	if(PIT_cb)
+	{
+		PIT_cb();
+	}
+
+	 uint32_t dummyRead = 0; /** Dummy variable for cleaning the PIT*/
+	 PIT->CHANNEL[0].TFLG |= PIT_TFLG_TIF_MASK; /** Clears the flag*/
+	 dummyRead = PIT->CHANNEL[0].TCTRL; /** Read control register for clear PIT flag, this is silicon bug*/
+	 g_flag_PIT_0 = TRUE; /** Clears the programmer flag*/
 }
 
 void PIT_delay(PIT_timer_t pit_timer, My_float_pit_t system_clock, My_float_pit_t delay)
@@ -90,4 +88,9 @@ void PIT_enable_interrupt(PIT_timer_t pit) /** Configures the timers for the PIT
 {
      PIT->CHANNEL[pit].TCTRL |= PIT_TCTRL_TIE_MASK;
      PIT->CHANNEL[pit].TCTRL |= PIT_TCTRL_TEN_MASK;
+}
+
+void PIT_callback_init(void (*handler)(void)) /**Assigns the function to execute according to the port*/
+{
+		PIT_cb = handler;
 }
