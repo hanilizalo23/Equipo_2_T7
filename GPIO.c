@@ -20,6 +20,8 @@
 static void (*gpio_C_callback)(void) = 0; /**Callback for the switch 2*/
 static void (*gpio_A_callback)(void) = 0; /**Callback for the switch 3*/
 
+static volatile gpio_interrupt_flags_t g_intr_status_flag = {0}; /**Status of the interruption flag, struct*/
+
 uint8_t GPIO_clock_gating(gpio_port_name_t port_name)
 {
 	switch(port_name)/** Selecting the GPIO for clock enabling*/
@@ -124,12 +126,14 @@ uint8_t GPIO_read_pin(gpio_port_name_t port_name, uint8_t pin)
 	switch(port_name) /**Reading and returning the value of a specific pin of the desired port*/
 		{
 		case GPIO_A:/** GPIO A is selected*/
+			delay(100000); /**Shouldn't*/
 			return (GPIOA->PDIR & 1<<pin);
 			break;
 		case GPIO_B:/** GPIO B is selected*/
 			return (GPIOB->PDIR & 1<<pin);
 			break;
 		case GPIO_C:/** GPIO C is selected*/
+			delay(100000); /**Shouldn't*/
 			return (GPIOC->PDIR & 1<<pin);
 			break;
 		case GPIO_D:/** GPIO D is selected*/
@@ -309,5 +313,44 @@ void GPIO_callback_init(gpio_port_name_t port_name,void (*handler)(void)) /**Ass
 	else
 	{
 		gpio_C_callback = handler;
+	}
+}
+
+void GPIO_clear_irq_status(gpio_port_name_t gpio) /**Cleans the flag of a determined port when the interruption is done*/
+{
+	if(GPIO_A == gpio)
+	{
+		g_intr_status_flag.flag_port_a = FALSE;
+	}
+	else
+	{
+		g_intr_status_flag.flag_port_c = FALSE;
+	}
+}
+
+uint8_t GPIO_get_irq_status(gpio_port_name_t gpio) /**Gets the status of the flag of a port*/
+{
+	uint8_t status = 0;
+
+	if(GPIO_A == gpio)
+	{
+		status = g_intr_status_flag.flag_port_a;
+	}
+	else
+	{
+		status = g_intr_status_flag.flag_port_c;
+	}
+
+	return(status);
+}
+
+
+void delay(uint32_t delay) /**Counter for wasting time, not desired and maybe not correct, for a little delay when reading the ports*/
+{
+	volatile uint32_t j;
+
+	for(j = delay; j > 0; j--)
+	{
+		__asm("nop");
 	}
 }

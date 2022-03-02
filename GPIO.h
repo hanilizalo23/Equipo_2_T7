@@ -75,6 +75,20 @@
 /** Sets Interrupt when logic 1.*/
 #define INTR_LOGIC1        0x000C0000
 
+/**Needed variables for the interruptions of the switch*/
+#define SW3_INT PORTA_IRQHandler
+#define SW2_INT PORTC_IRQHandler
+
+/**Flags of the interruptions*/
+typedef struct
+{
+	uint8_t flag_port_a : 1;
+	uint8_t flag_port_b : 1;
+	uint8_t flag_port_c : 1;
+	uint8_t flag_port_d : 1;
+	uint8_t flag_port_e : 1;
+} gpio_interrupt_flags_t;
+
 
 /*! This definition is used to configure whether a pin is an input or an output*/
 typedef enum {GPIO_INPUT,/*!< Definition to configure a pin as input */
@@ -104,9 +118,6 @@ typedef const uint32_t gpio_pin_control_register_t;
  	 \todo Implement a mechanism to clear interrupts by a specific pin.
  */
 void GPIO_clear_interrupt(gpio_port_name_t port_name);
-
-
-
 /********************************************************************************************/
 /********************************************************************************************/
 /********************************************************************************************/
@@ -217,7 +228,11 @@ void GPIO_toogle_pin(gpio_port_name_t port_name, uint8_t pin);
 
 void PORTC_IRQHandler(void); /**Verifies if the interrupt was from port C and calls the correspondent function*/
 void PORTA_IRQHandler(void); /**Verifies if the interrupt was from port A and calls the correspondent function*/
-void GPIO_clear_interrupt(gpio_port_name_t port_name); /**Cleans the interrupr that was called*/
+void GPIO_clear_interrupt(gpio_port_name_t port_name); /**Cleans the interrupt that was called*/
 void GPIO_callback_init(gpio_port_name_t port_name,void (*handler)(void)); /**Assigns the function to execute according to the port*/
+void GPIO_clear_irq_status(gpio_port_name_t gpio); /**Cleans the flag of a determined port when the interruption is done*/
+uint8_t GPIO_get_irq_status(gpio_port_name_t gpio); /**Gets the status of the flag of a port*/
+void delay(uint32_t delay); /**More easier and quick than the PIT, just for this occasion*/
+
 
 #endif /* GPIO_H_ */
